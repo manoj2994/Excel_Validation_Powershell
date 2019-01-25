@@ -18,12 +18,13 @@ function Test-Ping{
 
 begin{
 
-$ping = New-Object System.Net.NetworkInformation.Ping
-$ip = (Get-Content C:\Users\Administrator\Desktop\servers.txt)
-$array = @()
-$n =$ip.Count
 
- 
+
+[System.Object]$result = @()
+$n =$ip.Count
+$ip = Import-Csv -Path "\\172.20.108.150\e$\IS\daily\ISLAB\ISLAB_TEST_PING.csv"
+Write-Verbose "[Reading ]File Reading From Share Path" -Verbose
+Write-Verbose "[Started ]Servers Started Testing" -Verbose
 }
 
 process{
@@ -34,73 +35,118 @@ foreach ($i in $ip){
 
 
 try{
-
-$check = $ping.SendPingAsync("$i")
-
-$test = $check.result
-#$dns = [Net.DNS]::GetHostEntry("$i") 
+$ping = New-Object System.Net.NetworkInformation.Ping
+$test = $ping.Send("$($i.'IP ADDRESS')",1900)
 
 
-if ($test.Status -eq "TimedOut" ){
+#$dns = [Net.DNS]::GetHostEntry("$i")
 
 
-$PingStatus = [pscustomobject]@{
-
-'STATUS' = "OFFLINE" 
-
-'IP ADDRESS' = "$i"
-
-                         }
 
 
-$array += $PingStatus
+
+switch ( $test.Status)  {
+
+
+("TimedOut"){
+
+$i | Add-Member -MemberType NoteProperty -Name "STATUS AT $((get-date).tostring('d.M.y-hh tt'))" -Value "OFFLINE" -Force
+
+
+$result += $i
 
 }
 
+( "Success"){
 
- 
    
+   $i | Add-Member -MemberType NoteProperty -Name "STATUS AT $((get-date).tostring('d.M.y-hh tt'))" -Value "ONLINE" -Force
+   $result += $i 
 
-}catch{
+}
 
-$error =$_.Exception.Message
+("DestinationHostUnreachable") {
+
+$i | Add-Member -MemberType NoteProperty -Name "STATUS AT $((get-date).tostring('d.M.y-hh tt'))" -Value "HOST NOT REACHABLE" -Force
+ 
+  $result += $i 
+
+}
+
+
 
 }
 }
 
+catch{
+
+	$i | Add-Member -MemberType NoteProperty -Name "STATUS AT $((get-date).tostring('d.M.y-hh tt'))" -Value "HOST NOT FOUND" -Force
+ 
+        $result += $i 
+
+}
+
 }
 
 
+
+}
 
 end{
 
-  if($array.STATUS -eq "OFFLINE"){
+$Totalo=($ip."STATUS AT $((get-date).tostring('d.M.y-hh tt'))" | where {$_ -eq "OFFLINE"} ).count
+$Total= ($ip.'IP ADDRESS').Count
 
- Write-Warning -Message "Team Please Take Neccesary Action Before gets Escalation form Either Team or Ramathas"
+  if(($result."STATUS AT $((get-date).tostring('d.M.y-hh tt'))" ) -eq "OFFLINE"){
+ Write-Host ""
+ Write-Warning -Message "ALERT!!!!!!!! TEAM PLEASE TAKE IMMEDIATE ACTION ON THE BELOW SERVERS"
+ write-host "This Report is Taken From VDI: " -NoNewline
+ Write-Host $env:COMPUTERNAME -ForegroundColor green
 
- $array
+ Write-Host "`nTotal Number of Servers Checked: " -NoNewline
+ Write-Host $Total -ForegroundColor green
+ write-host "`nTotal Number of Servers OFFLINE: " -NoNewline 
+ Write-Host $Totalo  -ForegroundColor green
 
-  }else{
+
+ $result | select -Property 'Computer Name', 'IP ADDRESS','Domain',"STATUS AT $((get-date).tostring('d.M.y-hh tt'))"  |Where-Object  {($_."STATUS AT $((get-date).tostring('d.M.y-hh tt'))") -contains 'OFFLINE' }
+
+  }
+  
+  
+  else{
 
 
-
+Write-Host ""
 Write-Host "ALL Reachable  100%  " -ForegroundColor Green
+write-host "This Report is Taken From VDI: " -NoNewline
+Write-Host $env:COMPUTERNAME -ForegroundColor green
+
+Write-Host "`nTotal Number of Servers Checked: " -NoNewline
+Write-Host $Total -ForegroundColor green
+write-host "`nTotal Number of Servers OFFLINE: " -NoNewline 
+Write-Host $Totalo  -ForegroundColor green
+
 
 }
 
+try{
+
+$result | Export-Csv -NoTypeInformation "\\172.20.108.150\e$\IS\daily\ISLAB\ISLAB_TEST_PING.csv"
+
 }
+catch{
+
+
+
+
+Write-Warning "Unable to Save the Excel File in the Path ,The Sheet is opened.Please close and Try again " 
+
+write-host ""
+
 }
-Clear-Variable -Name array
-
-
-
-ping 10.0.0.0
-
-
-
-foreach ($i in $ip){
-
-$i
+Clear-Variable -Name result,ip
+}
 
 
 }
