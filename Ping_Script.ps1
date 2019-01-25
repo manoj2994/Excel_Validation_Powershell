@@ -22,7 +22,7 @@ begin{
 
 [System.Object]$result = @()
 $n =$ip.Count
-$ip = Import-Csv -Path "\\172.20.108.150\e$\IS\daily\ISLAB\ISLAB_TEST_PING.csv"
+$ip = Import-Csv -Path "\\xxxxxxxxxxx\TEST_PING.csv"
 Write-Verbose "[Reading ]File Reading From Share Path" -Verbose
 Write-Verbose "[Started ]Servers Started Testing" -Verbose
 }
@@ -132,7 +132,7 @@ Write-Host $Totalo  -ForegroundColor green
 
 try{
 
-$result | Export-Csv -NoTypeInformation "\\172.20.108.150\e$\IS\daily\ISLAB\ISLAB_TEST_PING.csv"
+$result | Export-Csv -NoTypeInformation "\\xxxxxxxxxxxx\TEST_PING.csv"
 
 }
 catch{
